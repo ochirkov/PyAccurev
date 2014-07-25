@@ -1,8 +1,9 @@
 """This module provides most common functions for AccuRev.
-   Authors: Anastasia Panchenko, Oleksandr Chyrkov
+   Author: Anastasia Panchenko
 """
 
 import os
+import sys
 import socket
 import subprocess
 
@@ -25,10 +26,13 @@ class AccuRev(object):
     def __init__(self):
         self.info()
 
-    def run(self, *args, **kwargs):
-        "Runs raw AccuRev commands"
-        cmd = subprocess.Popen("accurev %s" % ' '.join(args),
-                               stdout=subprocess.PIPE,
+    def run(self, command, verbose=False):
+        """
+        Runs raw AccuRev commands
+        """
+        out = sys.stdout if verbose else subprocess.PIPE
+        cmd = subprocess.Popen("accurev %s" % command,
+                               stdout=out,
                                stderr=subprocess.PIPE)
         stdout, stderr = cmd.communicate()
         retcode = cmd.returncode
@@ -38,8 +42,8 @@ class AccuRev(object):
         
         return stdout, stderr, retcode
     
-    def login(self, *args):
-        self.run("login", *args)
+    def login(self, username, passwd):
+        self.run("login %s %s" % (username, passwd))
     
     def logout(self):
         self.run("logout")
@@ -65,7 +69,7 @@ class AccuRev(object):
                        "current_top"       : "Top",
                       }
         
-        info, error, ecode = self.run("info", "-v")
+        info, error, ecode = self.run("info -v")
         self.error = error
         for k, v in self.params.items():
             value = [i.split(v + ":")[1].strip() for i in info.splitlines() if v in i]
@@ -105,7 +109,7 @@ class ARWorkspace(AccuRev):
                 print "Workspace's %s is not set." % i
                 break
         else:
-            self.run("mkws", "-w", self.name, "-l", self.location, "-b", self.stream)
+            self.run("mkws -w %s -l %s -b %s" % (self.name, self.location, self.stream))
             print "Done."
 
     @workspace_dir_required
@@ -114,7 +118,7 @@ class ARWorkspace(AccuRev):
             self.name = name
         print "Changing workspace name from {0} to {1}...".format(self.current_workspace,
                                                                   self.name)
-        self.run("chws", "-w", self.current_workspace, self.name)
+        self.run("chws -w %s %s" % (self.current_workspace, self.name))
         print "Done."
     
     @workspace_dir_required
@@ -123,7 +127,7 @@ class ARWorkspace(AccuRev):
             self.stream = stream
         print "Changing workspace stream from {0} to {1}...".format(self.current_stream,
                                                                     self.stream)
-        self.run("chws", "-w", self.current_workspace, "-b", self.stream)
+        self.run("chws -w %s -b %s" % (self.current_workspace, self.stream))
         print "Done."
     
     @workspace_dir_required
@@ -140,34 +144,33 @@ class ARWorkspace(AccuRev):
         if not self.machine_name:
             self.machine_name = socket.gethostname()
         print "Changing workspace %s..." % self.current_workspace
-        self.run("chws", "-w", self.current_workspace, "-l", self.location,
-                 "-b", self.stream, "-m", self.machine_name)
+        self.run("chws -w %s -l %s -b %s -m %s" % (self.current_workspace, self.location,
+                                                   self.stream, self.machine_name))
         print "Done."
 
     @workspace_dir_required
     def update(self):
-        print "Update started..."
-        stdout, stderr, ecode = self.run("update")
-        print stdout
+        self.run("update", verbose=True)
     
     @workspace_dir_required
     def populate(self):
-        print "Populate started..."
-        stdout, stderr, ecode = self.run("pop -O -R .")
-        print stdout
+        self.run("pop -O -R .", verbose=True)
+        print "Done."
 
 if __name__ == '__main__':
     ar = AccuRev()
 #     ar.run(bla='bla')
 #     ar.logout()
+    ar.login('foo', 'bar')
     ar.change_root(r'D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps')
     w = ARWorkspace()
-    w.populate()
-#     w.name = "dev.ws.Test"
+    w.update()
+#     w.populate()
+#     w.name = "dev.ws.Test1"
 #     w.location = r"D:\\foo"
 #     w.stream = "dev.buildmgr.TestProject"
 #     w.create()
-#     w.change_name("dev.ws.buildmgr.TestOverlaps3")
+#     w.change_name("dev.ws.buildmgr.TestOverlaps4")
 #     w.change_stream("dev.buildmgr.TestStream")
 #     w.change_location(r"D:\\Test")
 #     w.location = r'D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps'
