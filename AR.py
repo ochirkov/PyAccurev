@@ -23,6 +23,8 @@ class AccuRev(object):
         connection to server, login/logout commands.
         """
     
+    NID_MESSAGE = "You are not in a directory associated with a workspace"
+    
     def __init__(self):
         self.info()
 
@@ -54,6 +56,9 @@ class AccuRev(object):
             os.chdir(root)
         except Exception as e:
             print str(e)
+        else:
+            print "Done."
+
     
     def info(self):
         self.params = {
@@ -66,11 +71,14 @@ class AccuRev(object):
                        "current_depot"     : "Depot",
                        "current_workspace" : "Workspace/ref",
                        "current_stream"    : "Basis",
-                       "current_top"       : "Top",
+                       "current_location"  : "Top",
                       }
         
-        info, error, ecode = self.run("info -v")
-        self.error = error
+        info, error = self.run("info -v")[:2]
+        
+        if self.NID_MESSAGE in error:
+            self.nid_error = error
+        
         for k, v in self.params.items():
             value = [i.split(v + ":")[1].strip() for i in info.splitlines() if v in i]
             if value:
@@ -79,28 +87,27 @@ class AccuRev(object):
     def __getattr__(self, name):
         if name in self.params.keys():
             return self.error if self.error else "(undefined)"
-
+    
     
 class ARWorkspace(AccuRev):
     """
     A class for working with current workspace or for
     creating new workspace.
     """
-    
+
     def workspace_dir_required(func):
         """
         Decorator for function which should be called only
         in workspace directory.
         """
         def wrapper(self, *args):
-            if self.error:
-                print "An error occured while executing the '%s' function: %s" \
-                                                    % (func.__name__, self.error)
-                return
+            if self.nid_error:
+                print "Cann't execute the '%s' function" % func.__name__
+                raise ARException(self.nid_error)
             else:
                 func(self, *args)
         return wrapper
-    
+
     def create(self):
         required = ["name", "location", "stream"]
         print "Creating new workspace %s..." % self.name
@@ -134,9 +141,9 @@ class ARWorkspace(AccuRev):
     def change_location(self, location=""):
         if location:
             self.location = location
-        print "Changing workspace location from {0} to {1}...".format(self.current_top,
+        print "Changing workspace location from {0} to {1}...".format(self.current_location,
                                                                       self.location)
-        self.run("chws", "-w", self.current_workspace, "-l", self.location)
+        self.run("chws -w %s -l %s" % (self.current_workspace, self.location))
         print "Done."
     
     @workspace_dir_required
@@ -150,10 +157,12 @@ class ARWorkspace(AccuRev):
 
     @workspace_dir_required
     def update(self):
+        print "Starting update of workspace..."
         self.run("update", verbose=True)
     
     @workspace_dir_required
     def populate(self):
+        print "Starting populate of workspace..."
         self.run("pop -O -R .", verbose=True)
         print "Done."
 
@@ -161,9 +170,11 @@ if __name__ == '__main__':
     ar = AccuRev()
 #     ar.run(bla='bla')
 #     ar.logout()
-    ar.login('foo', 'bar')
-    ar.change_root(r'D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps')
+    ar.login('bla', 'foo')
+#     ar.change_root(r"D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps")
+    ar.change_root(r"D:\Test")
     w = ARWorkspace()
+    print w.current_location
     w.update()
 #     w.populate()
 #     w.name = "dev.ws.Test1"
@@ -172,7 +183,7 @@ if __name__ == '__main__':
 #     w.create()
 #     w.change_name("dev.ws.buildmgr.TestOverlaps4")
 #     w.change_stream("dev.buildmgr.TestStream")
-#     w.change_location(r"D:\\Test")
+#     w.change_location(r"D:\Test")
 #     w.location = r'D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps'
 #     w.stream = r"dev.buildmgr.TestProject"
 #     w.change()
