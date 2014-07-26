@@ -23,15 +23,15 @@ class AccuRev(object):
         connection to server, login/logout commands.
         """
     
+    # Not in directory message
     NID_MESSAGE = "You are not in a directory associated with a workspace"
     
     def __init__(self):
         self.info()
 
     def run(self, command, verbose=False):
-        """
-        Runs raw AccuRev commands
-        """
+        """Runs raw AccuRev commands."""
+        
         out = sys.stdout if verbose else subprocess.PIPE
         cmd = subprocess.Popen("accurev %s" % command,
                                stdout=out,
@@ -51,6 +51,9 @@ class AccuRev(object):
         self.run("logout")
 
     def change_root(self, root):
+        """Use this function for moving to the workspace directory
+           """
+        
         print "Changing directory to %s..." % root
         try:
             os.chdir(root)
@@ -61,6 +64,9 @@ class AccuRev(object):
 
     
     def info(self):
+        """ Sets main environment parameters as properties.
+            """
+        
         self.params = {
                        "current_user"      : "Principal",
                        "current_host"      : "Host",
@@ -90,14 +96,13 @@ class AccuRev(object):
     
     
 class ARWorkspace(AccuRev):
-    """
-    A class for working with current workspace or for
-    creating new workspace.
-    """
+    """A class for working with current workspace or for
+       creating new workspace.
+       """
 
     def workspace_dir_required(func):
         """
-        Decorator for function which should be called only
+        Decorator for functions which should be called only
         in workspace directory.
         """
         def wrapper(self, *args):
@@ -109,15 +114,19 @@ class ARWorkspace(AccuRev):
         return wrapper
 
     def create(self):
+        """ Use it for creating of new workspace.
+            Name, location and stream options are required.
+            """
+        
         required = ["name", "location", "stream"]
         print "Creating new workspace %s..." % self.name
         for i in required:
             if not getattr(self, i):
-                print "Workspace's %s is not set." % i
-                break
+                raise ARException("Workspace's %s is not set." % i)
         else:
             self.run("mkws -w %s -l %s -b %s" % (self.name, self.location, self.stream))
             print "Done."
+            sys.exit(0)
 
     @workspace_dir_required
     def change_name(self, name=""):
@@ -127,6 +136,7 @@ class ARWorkspace(AccuRev):
                                                                   self.name)
         self.run("chws -w %s %s" % (self.current_workspace, self.name))
         print "Done."
+        sys.exit(0)
     
     @workspace_dir_required
     def change_stream(self, stream=""):
@@ -136,6 +146,7 @@ class ARWorkspace(AccuRev):
                                                                     self.stream)
         self.run("chws -w %s -b %s" % (self.current_workspace, self.stream))
         print "Done."
+        sys.exit(0)
     
     @workspace_dir_required
     def change_location(self, location=""):
@@ -145,40 +156,54 @@ class ARWorkspace(AccuRev):
                                                                       self.location)
         self.run("chws -w %s -l %s" % (self.current_workspace, self.location))
         print "Done."
+        sys.exit(0)
     
     @workspace_dir_required
     def change(self):
+        """Changes all parameters of workspace: location, stream, machine name.
+           """ 
+        
         if not self.machine_name:
             self.machine_name = socket.gethostname()
         print "Changing workspace %s..." % self.current_workspace
         self.run("chws -w %s -l %s -b %s -m %s" % (self.current_workspace, self.location,
                                                    self.stream, self.machine_name))
         print "Done."
-
+        sys.exit(0)
+    
+    @workspace_dir_required
+    def remove(self):
+        print "Removing workspace %s..." % self.current_workspace
+        self.run("rmws %s" % self.current_workspace)
+        print "Done"
+        sys.exit(0)
+    
     @workspace_dir_required
     def update(self):
         print "Starting update of workspace..."
         self.run("update", verbose=True)
+        sys.exit(0)
     
     @workspace_dir_required
     def populate(self):
         print "Starting populate of workspace..."
         self.run("pop -O -R .", verbose=True)
         print "Done."
+        sys.exit(0)
 
 if __name__ == '__main__':
     ar = AccuRev()
 #     ar.run(bla='bla')
 #     ar.logout()
     ar.login('bla', 'foo')
-#     ar.change_root(r"D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps")
-    ar.change_root(r"D:\Test")
+    ar.change_root(r"D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps")
     w = ARWorkspace()
-    print w.current_location
-    w.update()
+#     w.remove()
+#     print w.current_location
+#     w.update()
 #     w.populate()
-#     w.name = "dev.ws.Test1"
-#     w.location = r"D:\\foo"
+#     w.name = "dev.ws.Test3"
+#     w.location = r"D:\\foo3"
 #     w.stream = "dev.buildmgr.TestProject"
 #     w.create()
 #     w.change_name("dev.ws.buildmgr.TestOverlaps4")
