@@ -18,6 +18,7 @@ class ARException(Exception):
     def __str__(self):
         return str(self.value)
 
+
 class AccuRev(object):
     """"Use this class for getting AccuRev info (host, port, user),
         connection to server, login/logout commands.
@@ -25,6 +26,8 @@ class AccuRev(object):
     
     # Not in directory message
     NID_MESSAGE = "You are not in a directory associated with a workspace"
+    # Undefined value
+    UNDEFINED = "(undefined)"
     
     def __init__(self):
         self.info()
@@ -62,7 +65,6 @@ class AccuRev(object):
         else:
             print "Done."
 
-    
     def info(self):
         """ Sets main environment parameters as properties.
             """
@@ -89,17 +91,23 @@ class AccuRev(object):
             value = [i.split(v + ":")[1].strip() for i in info.splitlines() if v in i]
             if value:
                 setattr(self, k, value[0])
-    
-    def __getattr__(self, name):
-        if name in self.params.keys():
-            return self.error if self.error else "(undefined)"
+            else:
+                setattr(self, k, self.UNDEFINED)
     
     
 class ARWorkspace(AccuRev):
     """A class for working with current workspace or for
        creating new workspace.
        """
-
+    
+    def __init__(self, workspace=""):
+        super(self.__class__, self).__init__()
+        if self.current_workspace == self.UNDEFINED and not workspace:
+            raise ARException("Can't get workspace name. " + \
+                              "Please set it while creating ARWorkspace object")
+        else:
+            self.current_workspace = workspace
+            
     def workspace_dir_required(func):
         """
         Decorator for functions which should be called only
@@ -112,7 +120,18 @@ class ARWorkspace(AccuRev):
             else:
                 func(self, *args)
         return wrapper
-
+    
+    def workspace_name_required(func):
+        """Use it for functions which requires workspace's name (change, remove, etc.).
+           """
+        def wrapper(self, *args):
+            if not self.current_workspace:
+                print "Cann't execute the '%s' function" % func.__name__
+                raise ARException("Workspace name isn't set.")
+            else:
+                func(self, *args)
+        return wrapper
+    
     def create(self):
         """ Use it for creating of new workspace.
             Name, location and stream options are required.
@@ -128,37 +147,46 @@ class ARWorkspace(AccuRev):
             print "Done."
             sys.exit(0)
 
-    @workspace_dir_required
+    @workspace_name_required
     def change_name(self, name=""):
-        if name:
-            self.name = name
-        print "Changing workspace name from {0} to {1}...".format(self.current_workspace,
-                                                                  self.name)
-        self.run("chws -w %s %s" % (self.current_workspace, self.name))
-        print "Done."
-        sys.exit(0)
+        return self.change_parameter("name", name)
     
-    @workspace_dir_required
+    @workspace_name_required
     def change_stream(self, stream=""):
-        if stream:
-            self.stream = stream
-        print "Changing workspace stream from {0} to {1}...".format(self.current_stream,
-                                                                    self.stream)
-        self.run("chws -w %s -b %s" % (self.current_workspace, self.stream))
-        print "Done."
-        sys.exit(0)
+        return self.change_parameter("stream", stream)
     
-    @workspace_dir_required
+    @workspace_name_required
     def change_location(self, location=""):
-        if location:
-            self.location = location
-        print "Changing workspace location from {0} to {1}...".format(self.current_location,
-                                                                      self.location)
-        self.run("chws -w %s -l %s" % (self.current_workspace, self.location))
+        return self.change_parameter("location", location)
+
+    @workspace_name_required
+    def change_machinename(self, machinename=""):
+        return self.change_parameter("machinename", machinename)
+    
+    @workspace_name_required
+    def change_parameter(self, parameter, value=""):
+        """This function is called when workspace's name, backed stream, location 
+           or machine name should be changed.
+           """
+        
+        params = {
+                   "name"        : (self.current_workspace, ""),
+                   "location"    : (self.current_location, "-l"),
+                   "stream"      : (self.current_stream, "-b"),
+                   "machinename" : (socket.gethostname(), "-m")
+                   }
+        
+        if value:
+            setattr(self, parameter,value)
+        print "Changing workspace's %s to %s..." % \
+                                (parameter, getattr(self, parameter))
+        self.run("chws -w %s %s %s" % \
+                 (self.current_workspace, params[parameter][1], getattr(self, parameter)), verbose=True)
         print "Done."
         sys.exit(0)
     
-    @workspace_dir_required
+    
+    @workspace_name_required
     def change(self):
         """Changes all parameters of workspace: location, stream, machine name.
            """ 
@@ -171,7 +199,7 @@ class ARWorkspace(AccuRev):
         print "Done."
         sys.exit(0)
     
-    @workspace_dir_required
+    @workspace_name_required
     def remove(self):
         print "Removing workspace %s..." % self.current_workspace
         self.run("rmws %s" % self.current_workspace)
@@ -192,26 +220,4 @@ class ARWorkspace(AccuRev):
         sys.exit(0)
 
 if __name__ == '__main__':
-    ar = AccuRev()
-#     ar.run(bla='bla')
-#     ar.logout()
-    ar.login('bla', 'foo')
-    ar.change_root(r"D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps")
-    w = ARWorkspace()
-#     w.remove()
-#     print w.current_location
-#     w.update()
-#     w.populate()
-#     w.name = "dev.ws.Test3"
-#     w.location = r"D:\\foo3"
-#     w.stream = "dev.buildmgr.TestProject"
-#     w.create()
-#     w.change_name("dev.ws.buildmgr.TestOverlaps4")
-#     w.change_stream("dev.buildmgr.TestStream")
-#     w.change_location(r"D:\Test")
-#     w.location = r'D:\BSENV\AccuRev\dev.ws.buildmgr.TestOverlaps'
-#     w.stream = r"dev.buildmgr.TestProject"
-#     w.change()
-    
-    
-    
+    pass
