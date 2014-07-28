@@ -127,7 +127,7 @@ class ARWorkspace(AccuRev):
         def wrapper(self, *args):
             if not self.current_workspace:
                 print "Cann't execute '%s' function" % func.__name__
-                raise ARException("Workspace name isn't set.")
+                raise ARException("Name of working workspace isn't set.")
             else:
                 func(self, *args)
         return wrapper
