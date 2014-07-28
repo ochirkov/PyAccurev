@@ -18,7 +18,6 @@ class ARException(Exception):
     def __str__(self):
         return str(self.value)
 
-
 class AccuRev(object):
     """"Use this class for getting AccuRev info (host, port, user),
         connection to server, login/logout commands.
@@ -65,6 +64,7 @@ class AccuRev(object):
         else:
             print "Done."
 
+    
     def info(self):
         """ Sets main environment parameters as properties.
             """
@@ -115,7 +115,7 @@ class ARWorkspace(AccuRev):
         """
         def wrapper(self, *args):
             if self.nid_error:
-                print "Cann't execute the '%s' function" % func.__name__
+                print "Cann't execute '%s' function" % func.__name__
                 raise ARException(self.nid_error)
             else:
                 func(self, *args)
@@ -126,7 +126,7 @@ class ARWorkspace(AccuRev):
            """
         def wrapper(self, *args):
             if not self.current_workspace:
-                print "Cann't execute the '%s' function" % func.__name__
+                print "Cann't execute '%s' function" % func.__name__
                 raise ARException("Workspace name isn't set.")
             else:
                 func(self, *args)
@@ -149,22 +149,22 @@ class ARWorkspace(AccuRev):
 
     @workspace_name_required
     def change_name(self, name=""):
-        return self.change_parameter("name", name)
+        return self.__change_parameter("name", name)
     
     @workspace_name_required
     def change_stream(self, stream=""):
-        return self.change_parameter("stream", stream)
+        return self.__change_parameter("stream", stream)
     
     @workspace_name_required
     def change_location(self, location=""):
-        return self.change_parameter("location", location)
+        return self.__change_parameter("location", location)
 
     @workspace_name_required
     def change_machinename(self, machinename=""):
-        return self.change_parameter("machinename", machinename)
+        return self.__change_parameter("machinename", machinename)
     
     @workspace_name_required
-    def change_parameter(self, parameter, value=""):
+    def __change_parameter(self, parameter, value=""):
         """This function is called when workspace's name, backed stream, location 
            or machine name should be changed.
            """
