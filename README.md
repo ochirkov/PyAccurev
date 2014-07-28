@@ -113,6 +113,17 @@ or
     w.change_name("new_workspace_name")
 
 
+Function "change" should be used for changing of both stream and location of workspace and could be used for changing of machine name also:
+
+    
+    from AR import AccuRev, ARWorkspace
+    
+    ...
+    w.stream = "dev.NewStream"
+    w.location = "/path/to/new/location"
+    w.machinename = "new_hostname" # not required
+    w.change()
+
 Functions "update" and "populate" work only in workspace's directory:
 
 
