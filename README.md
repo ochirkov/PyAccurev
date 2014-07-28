@@ -77,6 +77,7 @@ There are two possibilities for using methods of this class.
 
 
     from AR import AccuRev, ARWorkspace
+    
     ar = AccuRev()
     ar.login('username', 'password')
     ar.change_root('path/to/workspace')
@@ -87,10 +88,38 @@ There are two possibilities for using methods of this class.
 
 
     from AR import AccuRev, ARWorkspace
+    
     ar = AccuRev()
     ar.login('username', 'password')
     w = ARWorkspace("workspace_name")
     w.change_name("new_workspace_name")
     
 
+Changing of workspace could be made in two ways: by assigning new values and calling a function and by direct passing of parameter to the function e.g.:
 
+
+    from AR import AccuRev, ARWorkspace
+    
+    ...
+    w.name = "new_workspace_name"
+    w.change_name()
+
+or
+
+
+    from AR import AccuRev, ARWorkspace
+    
+    ...
+    w.change_name("new_workspace_name")
+
+
+Functions "update" and "populate" work only in workspace's directory:
+
+
+    from AR import AccuRev, ARWorkspace
+    
+    ar = AccuRev()
+    ...
+    ar.change_root('path/to/workspace')
+    w = ARWorkspace()
+    w.update()
