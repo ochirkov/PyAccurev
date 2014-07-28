@@ -191,11 +191,11 @@ class ARWorkspace(AccuRev):
         """Changes all parameters of workspace: location, stream, machine name.
            """ 
         
-        if not self.machine_name:
-            self.machine_name = socket.gethostname()
+        if not getattr(self, "machinename", None):
+            self.machinename = socket.gethostname()
         print "Changing workspace %s..." % self.current_workspace
         self.run("chws -w %s -l %s -b %s -m %s" % (self.current_workspace, self.location,
-                                                   self.stream, self.machine_name))
+                                                   self.stream, self.machinename))
         print "Done."
         sys.exit(0)
     
