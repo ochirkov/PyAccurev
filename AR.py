@@ -6,7 +6,7 @@ import os
 import sys
 import socket
 import subprocess
-
+import xml.etree.ElementTree as ElementTree
 
 class ARException(Exception):
     """Exception thrown by AR in case of some AccuRev exceptions"""
@@ -29,7 +29,7 @@ class AccuRev(object):
     UNDEFINED = "(undefined)"
     
     def __init__(self):
-        self.info()
+        self.__info()
 
     def run(self, command, verbose=False):
         """Runs raw AccuRev commands."""
@@ -65,7 +65,7 @@ class AccuRev(object):
             print "Done."
 
     
-    def info(self):
+    def __info(self):
         """ Sets main environment parameters as properties.
             """
         
@@ -102,11 +102,7 @@ class ARWorkspace(AccuRev):
     
     def __init__(self, workspace=""):
         super(self.__class__, self).__init__()
-        if self.current_workspace == self.UNDEFINED and not workspace:
-            raise ARException("Can't get workspace name. " + \
-                              "Please set it while creating ARWorkspace object")
-        else:
-            self.current_workspace = workspace
+        self.current_workspace = workspace
             
     def workspace_dir_required(func):
         """
@@ -114,11 +110,8 @@ class ARWorkspace(AccuRev):
         in workspace directory.
         """
         def wrapper(self, *args):
-            if self.nid_error:
-                print "Cann't execute '%s' function" % func.__name__
-                raise ARException(self.nid_error)
-            else:
-                func(self, *args)
+            self.change_root(self.info()['Storage'])
+            return func(self, *args)
         return wrapper
     
     def workspace_name_required(func):
@@ -129,9 +122,27 @@ class ARWorkspace(AccuRev):
                 print "Cann't execute '%s' function" % func.__name__
                 raise ARException("Name of working workspace isn't set.")
             else:
-                func(self, *args)
+                return func(self, *args)
         return wrapper
     
+    @workspace_name_required
+    def info(self):
+        """Returns specified workspace parameters dictionary. Keys are:
+            'fileModTime','depot','user_id','Name','Stream','Target_trans',
+            'Type','Storage','EOL','Host','Trans','user_name'
+        """
+        try:
+            info = self.run("show -a -fx wspaces")[0]
+            res = ElementTree.fromstring(info)
+        except ElementTree.ParseError as e:
+            print "Error parsing Accurev show output '%s'. \n\nError: %s" % (info, str(e))
+        else:
+            for ws in res:
+                if ws.get('Name', '') == self.current_workspace + "_" + self.current_user:
+                    return ws.attrib
+        
+        raise ARException("Can't get info for %s" % self.current_workspace)
+
     def create(self):
         """ Use it for creating of new workspace.
             Name, location and stream options are required.
@@ -145,7 +156,6 @@ class ARWorkspace(AccuRev):
         else:
             self.run("mkws -w %s -l %s -b %s" % (self.name, self.location, self.stream))
             print "Done."
-            sys.exit(0)
 
     @workspace_name_required
     def change_name(self, name=""):
@@ -183,7 +193,6 @@ class ARWorkspace(AccuRev):
         self.run("chws -w %s %s %s" % \
                  (self.current_workspace, params[parameter][1], getattr(self, parameter)), verbose=True)
         print "Done."
-        sys.exit(0)
     
     
     @workspace_name_required
@@ -197,27 +206,30 @@ class ARWorkspace(AccuRev):
         self.run("chws -w %s -l %s -b %s -m %s" % (self.current_workspace, self.location,
                                                    self.stream, self.machinename))
         print "Done."
-        sys.exit(0)
     
     @workspace_name_required
     def remove(self):
         print "Removing workspace %s..." % self.current_workspace
         self.run("rmws %s" % self.current_workspace)
         print "Done"
-        sys.exit(0)
     
     @workspace_dir_required
     def update(self):
         print "Starting update of workspace..."
         self.run("update", verbose=True)
-        sys.exit(0)
-    
+
     @workspace_dir_required
     def populate(self):
         print "Starting populate of workspace..."
         self.run("pop -O -R .", verbose=True)
         print "Done."
-        sys.exit(0)
+
+    @workspace_dir_required
+    def force_update(self):
+        print "Starting update of workspace..."
+        self.run("update -9", verbose=True)
+        self.populate()
+        self.update()
 
 if __name__ == '__main__':
     pass
